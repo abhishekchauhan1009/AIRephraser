@@ -4,7 +4,7 @@ async function generateRephrases() {
   const userMessage = document.getElementById('userMessage').value.trim();
   if (!userMessage) { alert('Please enter a message!'); return; }
 
-  const apiKey = "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";
+  const apiKey = "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";
   const resultsEl = document.getElementById('results');
   resultsEl.innerHTML = '<p>⏳ Rephrasing...</p>';
 
