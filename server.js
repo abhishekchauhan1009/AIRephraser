@@ -28,48 +28,47 @@ app.post("/api/rephrase", async (req, res) => {
       return res.status(400).json({ error: "Message is required" });
     }
 
-    // Ask GPT for 3 rephrased versions
+    // Ask GPT for 3 styles
     const response = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content:
-            "You are a helpful assistant that always rephrases text into 3 distinct styles: Formal, Polite, and Casual. Return them clearly labeled as 1. Formal, 2. Polite, 3. Casual.",
+          content: `You are a helpful assistant that always rephrases a given text into 3 distinct styles:
+1. Formal
+2. Polite
+3. Casual
+
+Format the answer exactly as:
+Formal: <text>
+Polite: <text>
+Casual: <text>`,
         },
         {
           role: "user",
-          content: `Rephrase this message into 3 different styles:\n\n"${message}"`,
+          content: `Rephrase this message: "${message}"`,
         },
       ],
       max_tokens: 300,
     });
 
-    const output = response.choices[0].message.content.trim();
+    let output = response.choices[0].message.content.trim();
 
-    // Split into variations based on numbering (1. 2. 3.)
-    let variations = output
-      .split(/\n(?=\d+\.)/)
-      .map((s) => s.replace(/^\d+\.\s*/, "").trim())
-      .filter(Boolean);
+    // 🔥 Cleanup duplicate labels (like "Formal: Formal:")
+    output = output
+      .replace(/Formal:\s*Formal:/gi, "Formal:")
+      .replace(/Polite:\s*Polite:/gi, "Polite:")
+      .replace(/Casual:\s*Casual:/gi, "Casual:");
 
-    // Fallback: split by new lines if numbering not present
-    if (variations.length < 3) {
-      variations = output
-        .split(/\n/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }
-
-    // Ensure exactly 3 results (Formal, Polite, Casual)
-    if (variations.length > 3) {
-      variations = variations.slice(0, 3);
-    }
-    if (variations.length < 3) {
-      while (variations.length < 3) {
-        variations.push(variations[variations.length - 1] || output);
-      }
-    }
+    // Parse variations
+    const variations = {
+      formal:
+        output.match(/Formal:\s*(.*)/i)?.[1]?.trim() || "No formal variation",
+      polite:
+        output.match(/Polite:\s*(.*)/i)?.[1]?.trim() || "No polite variation",
+      casual:
+        output.match(/Casual:\s*(.*)/i)?.[1]?.trim() || "No casual variation",
+    };
 
     res.json({ rephrased: variations });
   } catch (error) {
